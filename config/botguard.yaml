@@ -1,0 +1,39 @@
+# botguard runtime config. Container defaults are sane; mount this file at
+# /etc/botguard/botguard.yaml to override.
+
+log:
+  path: /var/log/caddy/access.log
+  poll_interval: 250ms
+
+cache:
+  path: /var/lib/botguard/botguard.db
+  ttl:
+    allow:    168h    # 7 days  — verified good actors
+    deny:     720h    # 30 days — bad actors usually keep their infra
+    neutral:  168h    # 7 days  — ordinary visitors
+    nxdomain: 1h
+    error:    5m
+  block_retention: 2160h   # 90 days — IPs stay in blocked.caddy this long
+                          # even after the cache TTL expires.
+
+resolver:
+  workers: 8
+  timeout: 3s
+  max_in_flight: 64
+  servers: []           # use system resolver; or e.g. ["1.1.1.1:53"]
+
+caddy:
+  admin_url:    http://caddy:2019
+  caddyfile:    /etc/caddy/Caddyfile
+  snippet_path: /etc/caddy/dynamic/blocked.caddy
+  reload_debounce: 30s
+  reload_command: ""    # if set, run this shell cmd instead of admin API
+
+server:
+  listen: ""            # e.g. ":8088" to enable /healthz, /stats, /blocked
+  basic_auth:
+    user: ""
+    pass: ""
+
+rules:
+  path: /etc/botguard/rules.yaml

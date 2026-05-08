@@ -1,0 +1,107 @@
+version: '3'
+
+# Все Go-команды выполняются внутри docker-контейнера, чтобы версия Go,
+# тулчейн и кеши не зависели от того, что установлено на хосте.
+#
+# Кешируются между запусками два named-volume'а:
+#   botguard-gomod    — /go/pkg/mod (модуль-кеш)
+#   botguard-gobuild  — /root/.cache/go-build (компиляция)
+#   botguard-golangci — /root/.cache/golangci-lint (lint-кеш)
+
+vars:
+  GO_IMAGE: golang:1.22
+  LINT_IMAGE: golangci/golangci-lint:v1.59-alpine
+  IMAGE_NAME: botguard
+  IMAGE_TAG: dev
+  DOCKER_RUN_GO: >-
+    docker run --rm
+    -v {{.TASKFILE_DIR}}:/src
+    -v botguard-gomod:/go/pkg/mod
+    -v botguard-gobuild:/root/.cache/go-build
+    -w /src
+    -e GOFLAGS=-trimpath
+    {{.GO_IMAGE}}
+  DOCKER_RUN_LINT: >-
+    docker run --rm
+    -v {{.TASKFILE_DIR}}:/src
+    -v botguard-gomod:/go/pkg/mod
+    -v botguard-golangci:/root/.cache/golangci-lint
+    -w /src
+    {{.LINT_IMAGE}}
+
+tasks:
+  default:
+    desc: Список доступных задач
+    cmds:
+      - task --list-all
+    silent: true
+
+  tidy:
+    desc: "go mod tidy в контейнере (обновит go.sum)"
+    cmds:
+      - "{{.DOCKER_RUN_GO}} go mod tidy"
+
+  vet:
+    desc: "go vet ./... в контейнере"
+    cmds:
+      - "{{.DOCKER_RUN_GO}} go vet ./..."
+
+  test:
+    desc: "go test -race -count=1 ./... в контейнере"
+    cmds:
+      - "{{.DOCKER_RUN_GO}} go test -race -count=1 ./..."
+
+  build:
+    desc: "Сборка botguard и botctl в ./out через контейнер"
+    cmds:
+      - mkdir -p out
+      - >-
+        {{.DOCKER_RUN_GO}} sh -c
+        'CGO_ENABLED=0 go build -ldflags="-s -w" -o out/botguard ./cmd/botguard
+        && CGO_ENABLED=0 go build -ldflags="-s -w" -o out/botctl ./cmd/botctl'
+
+  lint:
+    desc: "golangci-lint в контейнере"
+    cmds:
+      - "{{.DOCKER_RUN_LINT}} golangci-lint run --timeout=5m"
+
+  ci:
+    desc: "Прогнать всё, что бегает на CI: tidy → vet → lint → test → build"
+    cmds:
+      - task: tidy
+      - task: vet
+      - task: lint
+      - task: test
+      - task: build
+
+  image:
+    desc: "Локальная сборка docker-образа botguard:dev"
+    cmds:
+      - docker build -t {{.IMAGE_NAME}}:{{.IMAGE_TAG}} .
+
+  image-multiarch:
+    desc: "Multi-arch buildx-сборка (linux/amd64 + linux/arm64)"
+    cmds:
+      - >-
+        docker buildx build
+        --platform linux/amd64,linux/arm64
+        -t {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
+        .
+
+  shell:
+    desc: "Открыть интерактивный shell внутри контейнера golang:1.22"
+    interactive: true
+    cmds:
+      - >-
+        docker run --rm -it
+        -v {{.TASKFILE_DIR}}:/src
+        -v botguard-gomod:/go/pkg/mod
+        -v botguard-gobuild:/root/.cache/go-build
+        -w /src
+        {{.GO_IMAGE}} sh
+
+  clean:
+    desc: "Удалить ./out и docker-volume'ы с кешами"
+    cmds:
+      - rm -rf out
+      - docker volume rm -f botguard-gomod botguard-gobuild botguard-golangci

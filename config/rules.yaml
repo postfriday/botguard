@@ -1,0 +1,128 @@
+# botguard rules — first match wins.
+#
+# Each rule may set:
+#   action:           allow | deny
+#   ua_regex:         optional, matched case-insensitively against User-Agent
+#   hostname_suffix:  optional list of suffixes; matches FCrDNS-confirmed hostnames
+#                     (or the bare domain itself, no leading "*.").
+#   require_fcrdns:   if true, the rule only applies when the PTR is verified.
+#
+# When both ua_regex and hostname_suffix are set, BOTH must match (AND).
+#
+# Verdict precedence (per request):
+#   override(allow|deny) > UA-only fast-path > FCrDNS-based rules > neutral
+
+rules:
+  # ──────────────────────────────────────────────────────────────────────
+  # ALLOW: LLM training crawlers we explicitly want indexed.
+  # We pin them to known publisher domains via FCrDNS to prevent UA spoofing.
+  # ──────────────────────────────────────────────────────────────────────
+  - name: allow-gptbot
+    action: allow
+    ua_regex: "GPTBot"
+    hostname_suffix: ["openai.com"]
+    require_fcrdns: true
+
+  - name: allow-claudebot
+    action: allow
+    ua_regex: "ClaudeBot|Claude-User|anthropic-ai"
+    hostname_suffix: ["anthropic.com", "claude.ai", "amazonaws.com"]
+    require_fcrdns: true
+
+  - name: allow-meta-externalagent
+    action: allow
+    ua_regex: "meta-externalagent"
+    hostname_suffix: ["facebook.com", "fbsbx.com", "tfbnw.net"]
+    require_fcrdns: true
+
+  - name: allow-amazonbot
+    action: allow
+    ua_regex: "Amazonbot"
+    hostname_suffix: ["crawl.amazon.com", "amazonaws.com"]
+    require_fcrdns: true
+
+  - name: allow-bytespider
+    action: allow
+    ua_regex: "Bytespider"
+    hostname_suffix: ["crawl.bytedance.com", "bytedance.com"]
+    require_fcrdns: true
+
+  # CCBot does not provide a stable hostname (it crawls from AWS), so we
+  # accept it on UA alone. If you want a stricter check, add an IP allowlist.
+  - name: allow-ccbot
+    action: allow
+    ua_regex: "CCBot"
+
+  # ──────────────────────────────────────────────────────────────────────
+  # ALLOW: classic search engines (kept verified to avoid spoofing).
+  # ──────────────────────────────────────────────────────────────────────
+  - name: allow-googlebot
+    action: allow
+    ua_regex: "Googlebot|Storebot-Google|GoogleOther|AdsBot-Google"
+    hostname_suffix: ["googlebot.com", "google.com"]
+    require_fcrdns: true
+
+  - name: allow-bingbot
+    action: allow
+    ua_regex: "bingbot|adidxbot"
+    hostname_suffix: ["search.msn.com"]
+    require_fcrdns: true
+
+  - name: allow-yandex
+    action: allow
+    ua_regex: "YandexBot|YandexImages|YandexMobileBot|YandexAccessibilityBot"
+    hostname_suffix: ["yandex.ru", "yandex.com", "yandex.net"]
+    require_fcrdns: true
+
+  - name: allow-applebot
+    action: allow
+    ua_regex: "Applebot"
+    hostname_suffix: ["applebot.apple.com", "apple.com"]
+    require_fcrdns: true
+
+  # ──────────────────────────────────────────────────────────────────────
+  # DENY: AI on-demand fetchers (user-facing). They serve our content as a
+  # substitute for an actual visit. UA-only deny is fine — these don't use
+  # high-value IPs we want to whitelist for anything else.
+  # ──────────────────────────────────────────────────────────────────────
+  - name: deny-chatgpt-user
+    action: deny
+    ua_regex: "ChatGPT-User"
+
+  - name: deny-oai-searchbot
+    action: deny
+    ua_regex: "OAI-SearchBot"
+
+  - name: deny-perplexity
+    action: deny
+    ua_regex: "PerplexityBot|Perplexity-User"
+
+  # ──────────────────────────────────────────────────────────────────────
+  # DENY: SEO scrapers / backlink miners (UA fast-path).
+  # ──────────────────────────────────────────────────────────────────────
+  - name: deny-seo-scrapers-ua
+    action: deny
+    ua_regex: "SemrushBot|SemrushBot-BA|AhrefsBot|MJ12bot|DotBot|SERankingBot|SERankingBacklinksBot|PetalBot|Pandalytics|Yatcybot"
+
+  # ──────────────────────────────────────────────────────────────────────
+  # DENY: same scrapers caught by hostname (UA spoofers landing on our IP).
+  # ──────────────────────────────────────────────────────────────────────
+  - name: deny-seo-hosts
+    action: deny
+    require_fcrdns: true
+    hostname_suffix:
+      - semrush.com
+      - ahrefs.com
+      - mj12bot.com
+      - moz.com
+      - dotbot.com
+      - serpstat.com
+      - keyword-research.com
+      - se-ranking.com
+
+  # ──────────────────────────────────────────────────────────────────────
+  # DENY: misc crawlers we don't care about (UA fast-path).
+  # ──────────────────────────────────────────────────────────────────────
+  - name: deny-low-value-ua
+    action: deny
+    ua_regex: "Baiduspider|Sogou|coccocbot|SeznamBot|heritrix|CyberOKInspect"
