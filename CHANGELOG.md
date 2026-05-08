@@ -14,6 +14,9 @@
 - `LICENSE` (MIT) и `CHANGELOG.md`.
 - `Taskfile.yml` с командами для запуска всех Go-операций (tidy/vet/lint/test/build)
   внутри docker-контейнера `golang:1.22` с named-volume'ами под кеши.
+- Каталог `dev/` со стендом для smoke-теста без Caddy (dev-конфиг,
+  упрощённые правила, sample-events.jsonl) и task-цели `dev:up`,
+  `dev:seed`, `dev:check`, `dev:logs`, `dev:down`, `dev:reset`.
 
 ### Changed
 - Module path: `github.com/selardo/botguard` → `github.com/postfriday/botguard`.

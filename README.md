@@ -278,6 +278,34 @@ task clean      # снести ./out и кеш-volume'ы
 Для тестирования FCrDNS без боевого Caddy: положите JSON-строки в файл,
 указанный в `log.path`, демон их подхватит.
 
+### Smoke-test без Caddy
+
+В каталоге `dev/` лежит готовый стенд: dev-конфиг с
+`caddy.reload_command: "true"` (no-op вместо admin API), упрощённый набор
+правил и пять заранее заготовленных лог-строк (ChatGPT-User, SemrushBot,
+PerplexityBot, AhrefsBot и обычный пользователь).
+
+```bash
+task image       # собрать botguard:dev
+task dev:up      # поднять контейнер на localhost:8088
+task dev:seed    # подкинуть sample-events.jsonl в access.log
+task dev:check   # /healthz, /blocked, содержимое blocked.caddy
+task dev:logs    # стрим JSON-логов демона
+task dev:down    # остановить
+task dev:reset   # обнулить БД, лог и снеппет
+```
+
+Что должно произойти после `dev:seed`:
+
+- `/healthz` возвращает 200 OK сразу.
+- `/blocked` через ~1.5 секунды возвращает JSON c четырьмя IP
+  (`203.0.113.10`, `.20`, `.30`, `.40`) — это срабатывание UA-fast-path
+  для on-demand AI-фетчеров и SEO-скраперов.
+- `dev/work/dynamic/blocked.caddy` содержит `@botguard_bad_ip remote_ip
+  203.0.113.10 203.0.113.20 …` и `respond @botguard_bad_ip 403`.
+- Пятая запись (`198.51.100.7`, обычный Safari) не попадает в blocked —
+  правило не нашлось, FCrDNS не запускается без правил с `require_fcrdns`.
+
 ## Версионирование
 
 Semver-теги (`v0.1.0`, `v0.2.0`, ...). До `v1.0.0` оставляем за собой право

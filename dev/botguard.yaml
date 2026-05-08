@@ -1,0 +1,43 @@
+# Dev-конфиг: запускает botguard в контейнере без реального Caddy.
+#
+# Главные отличия от production:
+#   - reload_command: "true"  → admin API не дёргается, перезагрузка no-op
+#   - reload_debounce: 1s     → быстрая обратная связь во время smoke-теста
+#   - server.listen: ":8088"  → /healthz, /stats, /blocked доступны снаружи
+#   - все рантайм-пути живут в /work (bind mount → ./dev/work)
+
+log:
+  path: /work/access.log
+  poll_interval: 100ms
+
+cache:
+  path: /work/botguard.db
+  ttl:
+    allow:    168h
+    deny:     720h
+    neutral:  168h
+    nxdomain: 1h
+    error:    5m
+  block_retention: 2160h
+
+resolver:
+  workers: 4
+  timeout: 3s
+  max_in_flight: 32
+  servers: []
+
+caddy:
+  admin_url:    http://localhost:2019
+  caddyfile:    /etc/caddy/Caddyfile
+  snippet_path: /work/dynamic/blocked.caddy
+  reload_debounce: 1s
+  reload_command: "true"
+
+server:
+  listen: ":8088"
+  basic_auth:
+    user: ""
+    pass: ""
+
+rules:
+  path: /etc/botguard/rules.yaml

@@ -1,0 +1,20 @@
+# Dev-набор правил. Минимизирован относительно config/rules.yaml — оставлены
+# только правила, которые срабатывают по UA без FCrDNS, чтобы smoke-тест
+# был детерминирован и не зависел от внешнего DNS.
+
+rules:
+  - name: deny-chatgpt-user
+    action: deny
+    ua_regex: "ChatGPT-User"
+
+  - name: deny-perplexity
+    action: deny
+    ua_regex: "PerplexityBot|Perplexity-User"
+
+  - name: deny-seo-scrapers-ua
+    action: deny
+    ua_regex: "SemrushBot|AhrefsBot|MJ12bot|DotBot"
+
+  - name: allow-ccbot
+    action: allow
+    ua_regex: "CCBot"

@@ -65,6 +65,20 @@ tasks:
     cmds:
       - "{{.DOCKER_RUN_LINT}} golangci-lint run --timeout=5m"
 
+  lint:fix:
+    desc: "golangci-lint --fix (автоисправление gofmt/goimports/whitespace)"
+    cmds:
+      - "{{.DOCKER_RUN_LINT}} golangci-lint run --fix --timeout=5m"
+
+  fmt:
+    desc: "gofmt -s -w + goimports -local в контейнере"
+    cmds:
+      - "{{.DOCKER_RUN_GO}} gofmt -s -w ."
+      - >-
+        {{.DOCKER_RUN_GO}} sh -c
+        'go install golang.org/x/tools/cmd/goimports@latest
+        && goimports -w -local github.com/postfriday/botguard .'
+
   ci:
     desc: "Прогнать всё, что бегает на CI: tidy → vet → lint → test → build"
     cmds:
@@ -105,3 +119,54 @@ tasks:
     cmds:
       - rm -rf out
       - docker volume rm -f botguard-gomod botguard-gobuild botguard-golangci
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Локальный smoke-test без реального Caddy. Использует dev/-конфиг с
+  # reload_command:"true" — admin API не дёргается. Все runtime-файлы
+  # живут в dev/work/ (gitignored).
+  # ──────────────────────────────────────────────────────────────────────
+
+  dev:up:
+    desc: "Запустить botguard-dev в контейнере (требует task image)"
+    cmds:
+      - mkdir -p dev/work/dynamic
+      - touch dev/work/access.log
+      - >-
+        docker run -d --rm --name botguard-dev
+        -v {{.TASKFILE_DIR}}/dev/botguard.yaml:/etc/botguard/botguard.yaml:ro
+        -v {{.TASKFILE_DIR}}/dev/rules.yaml:/etc/botguard/rules.yaml:ro
+        -v {{.TASKFILE_DIR}}/dev/Caddyfile.fake:/etc/caddy/Caddyfile:ro
+        -v {{.TASKFILE_DIR}}/dev/work:/work
+        -p 8088:8088
+        {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
+        -log-level debug
+      - 'echo "botguard-dev запущен. Логи: task dev:logs"'
+
+  dev:down:
+    desc: "Остановить botguard-dev"
+    cmds:
+      - docker stop botguard-dev 2>/dev/null || true
+
+  dev:logs:
+    desc: "Стримить логи botguard-dev"
+    cmds:
+      - docker logs -f botguard-dev
+
+  dev:seed:
+    desc: "Добавить sample-events.jsonl в access.log (демон должен быть поднят)"
+    cmds:
+      - cat dev/sample-events.jsonl >> dev/work/access.log
+      - 'echo "events appended; ждите ~1.5s до debounced reload, потом task dev:check"'
+
+  dev:check:
+    desc: "Опросить /healthz, /blocked и показать blocked.caddy"
+    cmds:
+      - 'echo "--- GET /healthz ---" && curl -fsS http://localhost:8088/healthz && echo'
+      - 'echo "--- GET /blocked ---" && curl -fsS http://localhost:8088/blocked && echo'
+      - 'echo "--- dev/work/dynamic/blocked.caddy ---" && cat dev/work/dynamic/blocked.caddy 2>/dev/null || echo "(нет файла, blocked-list пуст)"'
+
+  dev:reset:
+    desc: "Очистить access.log, БД и сгенерированный snippet"
+    cmds:
+      - rm -f dev/work/access.log dev/work/botguard.db dev/work/botguard.db-shm dev/work/botguard.db-wal dev/work/dynamic/blocked.caddy
+      - touch dev/work/access.log
