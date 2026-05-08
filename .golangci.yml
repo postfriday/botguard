@@ -1,31 +1,37 @@
-# golangci-lint config. Keep linters deliberate — noisy lint blocks PRs.
+# golangci-lint v2 config.
+# Migrated from v1 schema: gofmt/goimports переехали в `formatters`,
+# gosimple слит в staticcheck, `linters-settings` стал `linters.settings`.
+version: "2"
+
 run:
   timeout: 5m
   tests: true
 
 linters:
-  disable-all: true
+  default: none
   enable:
+    - bodyclose
     - errcheck
-    - gosimple
     - govet
     - ineffassign
-    - staticcheck
-    - unused
-    - bodyclose
-    - gofmt
-    - goimports
     - misspell
+    - staticcheck
     - unconvert
     - unparam
+    - unused
+  settings:
+    misspell:
+      locale: US
 
-linters-settings:
-  goimports:
-    local-prefixes: github.com/postfriday/botguard
-  misspell:
-    locale: US
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/postfriday/botguard
 
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0

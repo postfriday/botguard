@@ -20,6 +20,10 @@
 
 ### Changed
 - Module path: `github.com/selardo/botguard` → `github.com/postfriday/botguard`.
+- CI: апгрейд actions до Node 24-совместимых версий
+  (`actions/checkout@v5`, `actions/setup-go@v6`, `golangci/golangci-lint-action@v8`).
+- Линтер: миграция с golangci-lint v1.59 на v2.12 — `.golangci.yml` переписан
+  на v2-схему (`formatters` отдельной секцией, `gosimple` слит в `staticcheck`).
 - README переписан под отдельный проект (без selardo-зависимостей).
 - Caddyfile больше не запекается в образ — потребитель монтирует свой
   `/etc/caddy/Caddyfile` read-only.

@@ -10,7 +10,7 @@ version: '3'
 
 vars:
   GO_IMAGE: golang:1.22
-  LINT_IMAGE: golangci/golangci-lint:v1.59-alpine
+  LINT_IMAGE: golangci/golangci-lint:v2.12-alpine
   IMAGE_NAME: botguard
   IMAGE_TAG: dev
   DOCKER_RUN_GO: >-
