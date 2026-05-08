@@ -42,7 +42,7 @@ func main() {
 	if err != nil {
 		die("store: %v", err)
 	}
-	defer st.Close()
+	defer func() { _ = st.Close() }()
 
 	ctx := context.Background()
 	switch args[0] {
@@ -171,12 +171,12 @@ func runReport(ctx context.Context, st *store.Store, args []string) {
 	if err != nil {
 		die("query: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type r struct {
-		pattern    string
-		uniqueIPs  int
-		hits       int
+		pattern     string
+		uniqueIPs   int
+		hits        int
 		first, last int64
 	}
 	var data []r

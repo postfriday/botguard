@@ -56,7 +56,7 @@ func (t *Tailer) Run(ctx context.Context) error {
 
 	watcher, _ := fsnotify.NewWatcher() // best-effort
 	if watcher != nil {
-		defer watcher.Close()
+		defer func() { _ = watcher.Close() }()
 		// watch the directory so we see CREATE on rotation (file may not exist yet)
 		dir := filepath.Dir(t.path)
 		_ = watcher.Add(dir)
@@ -194,10 +194,10 @@ func sameFile(a, b os.FileInfo) bool {
 
 // caddyEntry is the relevant subset of Caddy's JSON access log format.
 type caddyEntry struct {
-	TS      float64        `json:"ts"`
-	Request caddyRequest   `json:"request"`
-	Status  int            `json:"status"`
-	Size    int            `json:"size"`
+	TS      float64      `json:"ts"`
+	Request caddyRequest `json:"request"`
+	Status  int          `json:"status"`
+	Size    int          `json:"size"`
 }
 
 type caddyRequest struct {

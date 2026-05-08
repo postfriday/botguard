@@ -13,39 +13,39 @@ import (
 // Config is the top-level YAML config.
 type Config struct {
 	Log struct {
-		Path        string `yaml:"path"`         // path to Caddy access log (JSON lines)
+		Path         string `yaml:"path"`          // path to Caddy access log (JSON lines)
 		PollInterval string `yaml:"poll_interval"` // fallback poll if fsnotify is unavailable, e.g. "200ms"
 	} `yaml:"log"`
 
 	Cache struct {
 		Path string `yaml:"path"` // path to SQLite db file
 		TTL  struct {
-			Allow   string `yaml:"allow"`
-			Deny    string `yaml:"deny"`
-			Neutral string `yaml:"neutral"`
+			Allow    string `yaml:"allow"`
+			Deny     string `yaml:"deny"`
+			Neutral  string `yaml:"neutral"`
 			NXDomain string `yaml:"nxdomain"`
-			Error   string `yaml:"error"`
+			Error    string `yaml:"error"`
 		} `yaml:"ttl"`
 		BlockRetention string `yaml:"block_retention"` // how long an IP stays in blocked.caddy
 	} `yaml:"cache"`
 
 	Resolver struct {
-		Workers    int      `yaml:"workers"`
-		Timeout    string   `yaml:"timeout"`
-		Servers    []string `yaml:"servers"`     // optional explicit DNS servers ("1.1.1.1:53")
-		MaxInFlight int     `yaml:"max_in_flight"`
+		Workers     int      `yaml:"workers"`
+		Timeout     string   `yaml:"timeout"`
+		Servers     []string `yaml:"servers"` // optional explicit DNS servers ("1.1.1.1:53")
+		MaxInFlight int      `yaml:"max_in_flight"`
 	} `yaml:"resolver"`
 
 	Caddy struct {
-		AdminURL    string `yaml:"admin_url"`     // e.g. http://caddy:2019
-		Caddyfile   string `yaml:"caddyfile"`     // path inside container
-		SnippetPath string `yaml:"snippet_path"`  // path of generated blocked.caddy
+		AdminURL       string `yaml:"admin_url"`    // e.g. http://caddy:2019
+		Caddyfile      string `yaml:"caddyfile"`    // path inside container
+		SnippetPath    string `yaml:"snippet_path"` // path of generated blocked.caddy
 		ReloadDebounce string `yaml:"reload_debounce"`
 		ReloadCommand  string `yaml:"reload_command"` // optional shell cmd, default "caddy reload"
 	} `yaml:"caddy"`
 
 	Server struct {
-		Listen   string `yaml:"listen"`     // e.g. :8088 (empty disables)
+		Listen    string `yaml:"listen"` // e.g. :8088 (empty disables)
 		BasicAuth struct {
 			User string `yaml:"user"`
 			Pass string `yaml:"pass"`
@@ -59,13 +59,13 @@ type Config struct {
 
 // Durations carries parsed durations next to a Config (lazy fill).
 type Durations struct {
-	PollInterval   time.Duration
-	TTLAllow       time.Duration
-	TTLDeny        time.Duration
-	TTLNeutral     time.Duration
-	TTLNXDomain    time.Duration
-	TTLError       time.Duration
-	BlockRetention time.Duration
+	PollInterval    time.Duration
+	TTLAllow        time.Duration
+	TTLDeny         time.Duration
+	TTLNeutral      time.Duration
+	TTLNXDomain     time.Duration
+	TTLError        time.Duration
+	BlockRetention  time.Duration
 	ResolverTimeout time.Duration
 	ReloadDebounce  time.Duration
 }
@@ -77,8 +77,8 @@ func Defaults() *Config {
 	c.Log.PollInterval = "250ms"
 
 	c.Cache.Path = "/var/lib/botguard/botguard.db"
-	c.Cache.TTL.Allow = "168h"      // 7 days
-	c.Cache.TTL.Deny = "720h"       // 30 days
+	c.Cache.TTL.Allow = "168h" // 7 days
+	c.Cache.TTL.Deny = "720h"  // 30 days
 	c.Cache.TTL.Neutral = "168h"
 	c.Cache.TTL.NXDomain = "1h"
 	c.Cache.TTL.Error = "5m"

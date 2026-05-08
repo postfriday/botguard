@@ -49,7 +49,7 @@ func main() {
 		logger.Error("store open", "err", err)
 		os.Exit(2)
 	}
-	defer st.Close()
+	defer func() { _ = st.Close() }()
 
 	res := resolver.New(dur.ResolverTimeout, cfg.Resolver.MaxInFlight, cfg.Resolver.Servers)
 

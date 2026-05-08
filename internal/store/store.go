@@ -176,7 +176,7 @@ func (s *Store) ActiveBlockedIPs(ctx context.Context, retention time.Duration) (
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var ips []string
 	for rows.Next() {
 		var ip string

@@ -23,17 +23,17 @@ import (
 
 // Controller renders the snippet and debounces reloads.
 type Controller struct {
-	snippetPath  string
-	caddyfile    string
-	adminURL     string
-	debounce     time.Duration
-	reloadCmd    string // optional shell command override
+	snippetPath string
+	caddyfile   string
+	adminURL    string
+	debounce    time.Duration
+	reloadCmd   string // optional shell command override
 
-	mu        sync.Mutex
-	pending   bool
-	timer     *time.Timer
-	lastHash  string
-	log       *slog.Logger
+	mu       sync.Mutex
+	pending  bool
+	timer    *time.Timer
+	lastHash string
+	log      *slog.Logger
 }
 
 // Options bundles configuration for New.
@@ -130,14 +130,14 @@ func (c *Controller) reloadAdminAPI(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("caddyctl: adapt: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode/100 != 2 {
 		b, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("caddyctl: adapt status=%d body=%s", resp.StatusCode, truncate(string(b), 256))
 	}
 	adapted := struct {
-		Result   any      `json:"result"`
-		Warnings []any    `json:"warnings"`
+		Result   any   `json:"result"`
+		Warnings []any `json:"warnings"`
 	}{}
 	if err := jsonDecode(resp.Body, &adapted); err != nil {
 		return fmt.Errorf("caddyctl: decode adapt: %w", err)
@@ -154,7 +154,7 @@ func (c *Controller) reloadAdminAPI(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("caddyctl: load: %w", err)
 	}
-	defer resp2.Body.Close()
+	defer func() { _ = resp2.Body.Close() }()
 	if resp2.StatusCode/100 != 2 {
 		b, _ := io.ReadAll(resp2.Body)
 		return fmt.Errorf("caddyctl: load status=%d body=%s", resp2.StatusCode, truncate(string(b), 256))

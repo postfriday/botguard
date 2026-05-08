@@ -118,7 +118,7 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []statRow
 	for rows.Next() {
 		var row statRow
@@ -141,7 +141,7 @@ func (s *Server) handleBlocked(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	type row struct {
 		IP, Hostname, Decision, Rule string
 		HitCount                     int64
