@@ -158,7 +158,7 @@ func (c *Controller) reloadAdminAPI(ctx context.Context) error {
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode/100 != 2 {
 		b, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("caddyctl: adapt status=%d body=%s", resp.StatusCode, truncate(string(b), 256))
+		return fmt.Errorf("caddyctl: adapt status=%d body=%s", resp.StatusCode, truncate(string(b)))
 	}
 	adapted := struct {
 		Result   any   `json:"result"`
@@ -182,7 +182,7 @@ func (c *Controller) reloadAdminAPI(ctx context.Context) error {
 	defer func() { _ = resp2.Body.Close() }()
 	if resp2.StatusCode/100 != 2 {
 		b, _ := io.ReadAll(resp2.Body)
-		return fmt.Errorf("caddyctl: load status=%d body=%s", resp2.StatusCode, truncate(string(b), 256))
+		return fmt.Errorf("caddyctl: load status=%d body=%s", resp2.StatusCode, truncate(string(b)))
 	}
 	c.log.Info("caddyctl: caddy reloaded via admin api")
 	return nil
@@ -230,7 +230,7 @@ func (c *Controller) reloadAdminAPIPatch(ctx context.Context, ips []string) erro
 	if resp.StatusCode/100 != 2 {
 		b, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("caddyctl: patch status=%d body=%s",
-			resp.StatusCode, truncate(string(b), 256))
+			resp.StatusCode, truncate(string(b)))
 	}
 	c.log.Info("caddyctl: caddy patched via admin api",
 		"path", c.configPath, "ips", len(ips))
@@ -256,12 +256,12 @@ func (c *Controller) reloadShell(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "sh", "-c", c.reloadCmd)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("caddyctl: reload cmd: %w (output=%s)", err, truncate(string(out), 256))
+		return fmt.Errorf("caddyctl: reload cmd: %w (output=%s)", err, truncate(string(out)))
 	}
 	return nil
 }
 
-// canonicalIPs trims, dedupes and sorts an IP slice. Hashing/serialising the
+// canonicalIPs trims, dedupes and sorts an IP slice. Hashing/serializing the
 // canonical form makes Render and the PATCH payload stable across input
 // orderings — important for both idempotency and Caddy diffing.
 func canonicalIPs(ips []string) []string {
@@ -338,9 +338,14 @@ func writeAtomic(path string, data []byte, perm os.FileMode) error {
 	return os.Rename(tmp.Name(), path)
 }
 
-func truncate(s string, n int) string {
-	if len(s) <= n {
+// maxErrBodySnippet caps how many bytes of an admin-API error body we splice
+// into a returned error. 256 is enough to read Caddy's "msg"/"error" fields
+// without dragging an entire JSON dump into logs.
+const maxErrBodySnippet = 256
+
+func truncate(s string) string {
+	if len(s) <= maxErrBodySnippet {
 		return s
 	}
-	return s[:n] + "..."
+	return s[:maxErrBodySnippet] + "..."
 }

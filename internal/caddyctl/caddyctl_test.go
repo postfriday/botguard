@@ -109,7 +109,7 @@ func TestReloadAdminAPIPatchEmptyList(t *testing.T) {
 		ConfigPath: "/id/botguard_blocked/match/0/remote_ip/ranges",
 		Debounce:   time.Hour,
 	})
-	// Reload directly without Render: lastIPs is nil — must serialise as [],
+	// Reload directly without Render: lastIPs is nil — must serialize as [],
 	// not "null" (Caddy would reject the latter for a slice-shaped node).
 	if err := c.Reload(context.Background()); err != nil {
 		t.Fatalf("Reload: %v", err)
