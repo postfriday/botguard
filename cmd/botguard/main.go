@@ -59,6 +59,7 @@ func main() {
 		AdminURL:      cfg.Caddy.AdminURL,
 		Debounce:      dur.ReloadDebounce,
 		ReloadCommand: cfg.Caddy.ReloadCommand,
+		ConfigPath:    cfg.Caddy.ConfigPath,
 		Logger:        logger,
 	})
 

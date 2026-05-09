@@ -169,6 +169,7 @@ caddy:
   snippet_path: /etc/caddy/dynamic/blocked.caddy
   reload_debounce: 30s
   reload_command: ""    # если задан, выполняется shell-командой вместо admin API
+  config_path: ""       # если задан — PATCH /config/<path> вместо /adapt + /load
 
 server:
   listen: ""            # ":8088" — включает /healthz, /stats, /blocked
@@ -179,6 +180,43 @@ server:
 rules:
   path: /etc/botguard/rules.yaml
 ```
+
+### Режимы перезагрузки Caddy
+
+Caddy admin API даёт три способа применить изменения; botguard выбирает их в
+таком приоритете:
+
+1. **`reload_command`** — произвольная shell-команда. Используется в dev-стенде
+   (`true` как no-op) и в экзотических установках без admin API.
+2. **`config_path`** — `PATCH /config/<path>` с JSON-массивом IP. Caddy
+   перезагружает только указанный узел — заметно дешевле полного reload и
+   сохраняет уже установленные TLS-handshake'и. Требует, чтобы в Caddyfile
+   (или JSON-конфиге) уже существовал matcher с известным `@id`. Минимальный
+   пример:
+
+   ```caddy
+   example.com {
+       route {
+           @botguard_blocked {
+               remote_ip
+           }
+           respond @botguard_blocked 403
+       }
+   }
+   ```
+
+   Затем в `botguard.yaml`:
+
+   ```yaml
+   caddy:
+     config_path: /id/botguard_blocked/match/0/remote_ip/ranges
+   ```
+
+   Снeпет `blocked.caddy` всё равно пишется на диск — он остаётся источником
+   правды для `/blocked` и удобен для отладки, но Caddy его уже не читает.
+
+3. **По умолчанию** — `POST /adapt` + `POST /load`. Полный reload Caddyfile
+   через admin API. Работает с любой структурой конфига, но дороже.
 
 ### Правила
 

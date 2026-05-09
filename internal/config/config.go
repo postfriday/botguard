@@ -42,6 +42,11 @@ type Config struct {
 		SnippetPath    string `yaml:"snippet_path"` // path of generated blocked.caddy
 		ReloadDebounce string `yaml:"reload_debounce"`
 		ReloadCommand  string `yaml:"reload_command"` // optional shell cmd, default "caddy reload"
+		// ConfigPath, when set, switches the reload to PATCH /config/<path>
+		// with the current IP list as a JSON array, replacing only that node
+		// in the running config instead of re-loading the whole Caddyfile.
+		// Example: "/id/botguard_blocked/match/0/remote_ip/ranges".
+		ConfigPath string `yaml:"config_path"`
 	} `yaml:"caddy"`
 
 	Server struct {

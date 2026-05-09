@@ -28,6 +28,19 @@ caddy:
   snippet_path: /etc/caddy/dynamic/blocked.caddy
   reload_debounce: 30s
   reload_command: ""    # if set, run this shell cmd instead of admin API
+  # config_path: when set, botguard sends PATCH /config/<path> with the IP
+  # list as a JSON array instead of doing /adapt + /load. Use this to update
+  # the matcher in place without re-loading the whole Caddyfile. Requires
+  # the matcher to be defined in your Caddyfile/JSON config with a stable
+  # @id, e.g.
+  #   route {
+  #     @botguard_blocked {
+  #       remote_ip
+  #     }
+  #     respond @botguard_blocked 403
+  #   }
+  # then expose it as JSON node "botguard_blocked" via @id and point here:
+  config_path: ""       # e.g. /id/botguard_blocked/match/0/remote_ip/ranges
 
 server:
   listen: ""            # e.g. ":8088" to enable /healthz, /stats, /blocked
