@@ -133,6 +133,8 @@ func runStatus(ctx context.Context, st *store.Store) {
 	var hits int64
 	_ = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM block_events`).Scan(&hits)
 
+	resolution, _ := st.ResolutionStats(ctx)
+
 	var first, last int64
 	_ = db.QueryRowContext(ctx, `SELECT MIN(ts), MAX(ts) FROM block_events`).Scan(&first, &last)
 
@@ -141,6 +143,9 @@ func runStatus(ctx context.Context, st *store.Store) {
 	fmt.Printf("    decision=deny:  %d\n", blocked)
 	fmt.Printf("    decision=allow: %d\n", allowed)
 	fmt.Printf("    decision=neutr: %d\n", neutral)
+	fmt.Printf("  fcrdns successes: %d\n", resolution.FCrDNSSuccesses)
+	fmt.Printf("  fcrdns failures:  %d\n", resolution.FCrDNSFailures)
+	fmt.Printf("  resolver failures: %d\n", resolution.ResolverFailures)
 	fmt.Printf("  block events:     %d\n", hits)
 	if first > 0 {
 		fmt.Printf("  first event:      %s\n", time.Unix(first, 0).Format(time.RFC3339))

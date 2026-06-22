@@ -19,12 +19,35 @@ const (
 type Verification string
 
 const (
-	VerifyConfirmed   Verification = "confirmed"   // PTR -> hostname, A -> IP matches
-	VerifyMismatch    Verification = "mismatch"    // forward lookup did not include the IP
-	VerifyNoPTR       Verification = "no_ptr"      // no PTR record
-	VerifyDNSError    Verification = "dns_error"   // SERVFAIL/timeout/network
-	VerifyUnattempted Verification = "unattempted" // not resolved yet
+	VerifyConfirmed      Verification = "confirmed"       // PTR -> hostname, A -> IP matches
+	VerifyMismatch       Verification = "mismatch"        // forward lookup did not include the IP
+	VerifyNoPTR          Verification = "no_ptr"          // no PTR record
+	VerifyForwardMissing Verification = "forward_missing" // PTR exists, but forward A/AAAA lookup found no records
+	VerifyDNSError       Verification = "dns_error"       // SERVFAIL/timeout/network
+	VerifyUnattempted    Verification = "unattempted"     // not resolved yet
 )
+
+// IsFCrDNSFailure reports whether verification completed without a resolver
+// infrastructure error but did not confirm the hostname.
+func (v Verification) IsFCrDNSFailure() bool {
+	switch v {
+	case VerifyMismatch, VerifyNoPTR, VerifyForwardMissing:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsResolverError reports whether verification failed because DNS resolution
+// itself failed.
+func (v Verification) IsResolverError() bool {
+	return v == VerifyDNSError
+}
+
+// IsFCrDNSSuccess reports whether verification confirmed the hostname.
+func (v Verification) IsFCrDNSSuccess() bool {
+	return v == VerifyConfirmed
+}
 
 // IPRecord is a cached row about a single IP.
 type IPRecord struct {

@@ -162,8 +162,9 @@ tasks:
     desc: "Опросить /healthz, /blocked и показать blocked.caddy"
     cmds:
       - 'echo "--- GET /healthz ---" && curl -fsS http://localhost:8088/healthz && echo'
-      - 'echo "--- GET /blocked ---" && curl -fsS http://localhost:8088/blocked && echo'
+      - 'echo "--- GET /blocked ---" && curl -fsS http://localhost:8088/blocked | jq'
       - 'echo "--- dev/work/dynamic/blocked.caddy ---" && cat dev/work/dynamic/blocked.caddy 2>/dev/null || echo "(нет файла, blocked-list пуст)"'
+      - 'echo "--- GET /metrics ---" && curl -fsS http://localhost:8088/metrics | jq'
 
   dev:reset:
     desc: "Очистить access.log, БД и сгенерированный snippet"

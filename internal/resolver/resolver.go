@@ -22,12 +22,24 @@ type Result struct {
 	IP           string
 	Hostname     string // canonical, lowercased, trailing dot stripped
 	Verification model.Verification
+	Reason       string // set for FCrDNS validation failures
 	Err          error
+}
+
+const (
+	ReasonNoPTR           = "ptr lookup returned NXDOMAIN"
+	ReasonForwardNotFound = "forward lookup returned NXDOMAIN or no A/AAAA records"
+	ReasonForwardMismatch = "forward lookup did not include original IP"
+)
+
+type lookupResolver interface {
+	LookupAddr(ctx context.Context, addr string) ([]string, error)
+	LookupHost(ctx context.Context, host string) ([]string, error)
 }
 
 // Resolver wraps a *net.Resolver with a worker pool and timeout.
 type Resolver struct {
-	rs      *net.Resolver
+	rs      lookupResolver
 	timeout time.Duration
 	sem     chan struct{}
 }
@@ -79,6 +91,7 @@ func (r *Resolver) Lookup(ctx context.Context, ip string) Result {
 	if err != nil {
 		if isNXDomain(err) {
 			res.Verification = model.VerifyNoPTR
+			res.Reason = ReasonNoPTR
 			return res
 		}
 		res.Verification = model.VerifyDNSError
@@ -87,6 +100,7 @@ func (r *Resolver) Lookup(ctx context.Context, ip string) Result {
 	}
 	if len(names) == 0 {
 		res.Verification = model.VerifyNoPTR
+		res.Reason = ReasonNoPTR
 		return res
 	}
 	host := normalize(names[0])
@@ -94,8 +108,18 @@ func (r *Resolver) Lookup(ctx context.Context, ip string) Result {
 
 	addrs, err := r.rs.LookupHost(ctx, host)
 	if err != nil {
+		if isNXDomain(err) {
+			res.Verification = model.VerifyForwardMissing
+			res.Reason = ReasonForwardNotFound
+			return res
+		}
 		res.Verification = model.VerifyDNSError
 		res.Err = err
+		return res
+	}
+	if len(addrs) == 0 {
+		res.Verification = model.VerifyForwardMissing
+		res.Reason = ReasonForwardNotFound
 		return res
 	}
 	for _, a := range addrs {
@@ -105,6 +129,7 @@ func (r *Resolver) Lookup(ctx context.Context, ip string) Result {
 		}
 	}
 	res.Verification = model.VerifyMismatch
+	res.Reason = ReasonForwardMismatch
 	return res
 }
 

@@ -1,4 +1,4 @@
-// Package server exposes a minimal HTTP read-only API: /healthz and /stats.
+// Package server exposes a minimal HTTP read-only API.
 package server
 
 import (
@@ -37,6 +37,7 @@ func New(o Options) *Server {
 	s := &Server{opts: o}
 	mux.HandleFunc("/healthz", s.handleHealth)
 	mux.Handle("/stats", s.auth(http.HandlerFunc(s.handleStats)))
+	mux.Handle("/metrics", s.auth(http.HandlerFunc(s.handleMetrics)))
 	mux.Handle("/blocked", s.auth(http.HandlerFunc(s.handleBlocked)))
 	if o.Listen != "" {
 		s.srv = &http.Server{
@@ -127,6 +128,16 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		out = append(out, row)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(out)
+}
+
+func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
+	out, err := s.opts.Store.ResolutionStats(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(out)

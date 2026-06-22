@@ -20,6 +20,15 @@ type Store struct {
 	db *sql.DB
 }
 
+// ResolutionStats summarizes cached DNS verification outcomes.
+type ResolutionStats struct {
+	FCrDNSSuccesses  int64            `json:"fcrdns_successes"`
+	FCrDNSFailures   int64            `json:"fcrdns_failures"`
+	ResolverFailures int64            `json:"resolver_failures"`
+	Unattempted      int64            `json:"unattempted"`
+	ByVerification   map[string]int64 `json:"by_verification"`
+}
+
 // Open opens (or creates) the SQLite database at path with WAL mode.
 func Open(path string) (*Store, error) {
 	if path == "" {
@@ -224,4 +233,38 @@ func (s *Store) PurgeExpired(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 	return res.RowsAffected()
+}
+
+// ResolutionStats returns aggregate counts for DNS infrastructure failures,
+// FCrDNS validation failures, and successful FCrDNS validations.
+func (s *Store) ResolutionStats(ctx context.Context) (ResolutionStats, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT verification, COUNT(*)
+		  FROM ip_cache
+		 GROUP BY verification`)
+	if err != nil {
+		return ResolutionStats{}, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	out := ResolutionStats{ByVerification: map[string]int64{}}
+	for rows.Next() {
+		var raw string
+		var count int64
+		if err := rows.Scan(&raw, &count); err != nil {
+			return ResolutionStats{}, err
+		}
+		out.ByVerification[raw] = count
+		switch v := model.Verification(raw); {
+		case v.IsFCrDNSSuccess():
+			out.FCrDNSSuccesses += count
+		case v.IsFCrDNSFailure():
+			out.FCrDNSFailures += count
+		case v.IsResolverError():
+			out.ResolverFailures += count
+		case v == model.VerifyUnattempted:
+			out.Unattempted += count
+		}
+	}
+	return out, rows.Err()
 }

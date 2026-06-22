@@ -49,7 +49,7 @@ botguard пинает Caddy через admin API — zero-downtime reload.
 │   ├── tailer/            # follow access.log с обработкой ротации
 │   ├── caddyctl/          # рендер сниппета + reload через admin API
 │   ├── pipeline/          # склейка всего вышеперечисленного
-│   ├── server/            # HTTP /healthz, /stats, /blocked (basic auth)
+│   ├── server/            # HTTP /healthz, /stats, /metrics, /blocked (basic auth)
 │   └── model/             # общие типы
 └── config/
     ├── botguard.yaml
@@ -172,7 +172,7 @@ caddy:
   config_path: ""       # если задан — PATCH /config/<path> вместо /adapt + /load
 
 server:
-  listen: ""            # ":8088" — включает /healthz, /stats, /blocked
+  listen: ""            # ":8088" — включает /healthz, /stats, /metrics, /blocked
   basic_auth:
     user: ""
     pass: ""
@@ -250,7 +250,7 @@ rules:
 | confirmed allow                 | 7 дней           |
 | confirmed deny (rule match)     | 30 дней          |
 | neutral (резолвится, нет правил)| 7 дней           |
-| no PTR / NXDOMAIN               | 1 час            |
+| no PTR / forward NXDOMAIN       | 1 час            |
 | SERVFAIL / timeout              | 5 минут          |
 
 Блок на уровне Caddy держится дольше — `block_retention: 90d`.
@@ -277,10 +277,11 @@ HTTP-эндпоинт включается через `server.listen: ":8088"`:
 ```
 GET  /healthz            # liveness — 200 OK
 GET  /stats?since=24h    # JSON: топ rule_pattern по событиям
+GET  /metrics            # JSON: successful FCrDNS / failed FCrDNS / resolver failures
 GET  /blocked            # JSON: текущие deny-IP с UA/hostname
 ```
 
-`/stats` и `/blocked` защищены basic auth, если настроен `server.basic_auth`.
+`/stats`, `/metrics` и `/blocked` защищены basic auth, если настроен `server.basic_auth`.
 
 Healthcheck в Docker-образе уже настроен (`pgrep -x botguard`), поэтому
 оркестратору достаточно поллить `/healthz`, чтобы заметить дегенерацию

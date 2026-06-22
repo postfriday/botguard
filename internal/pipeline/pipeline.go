@@ -164,8 +164,15 @@ func (p *Pipeline) handle(ctx context.Context, ev model.Event) {
 		p.markDirty()
 	}
 
-	if r.Err != nil {
+	if r.Verification.IsResolverError() && r.Err != nil {
 		p.log.Debug("resolver error", "ip", ev.IP, "err", r.Err)
+	} else if r.Verification.IsFCrDNSFailure() {
+		p.log.Debug("fcrdns validation failed",
+			"ip", ev.IP,
+			"hostname", r.Hostname,
+			"verification", r.Verification,
+			"reason", r.Reason,
+		)
 	}
 }
 
@@ -174,7 +181,7 @@ func (p *Pipeline) ttlFor(v model.Verification, d model.Decision) time.Duration 
 	switch v {
 	case model.VerifyDNSError:
 		return p.dur.TTLError
-	case model.VerifyNoPTR:
+	case model.VerifyNoPTR, model.VerifyForwardMissing:
 		return p.dur.TTLNXDomain
 	}
 	switch d {
